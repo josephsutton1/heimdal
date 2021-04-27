@@ -125,7 +125,7 @@ rk_base64_encode(const void *data, int size, char **str)
 {
     char *s, *p;
     int i;
-    int c;
+    uint32_t c;
     const unsigned char *q;
 
     if (size > INT_MAX/4 || size < 0) {
