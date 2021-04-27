@@ -167,6 +167,7 @@ rk_base64_encode(const void *data, int size, char **str)
 }
 
 #define DECODE_ERROR 0xffffffff
+#define DECODE_DONE 0xfffffffe
 
 static uint32_t
 token_decode(const char *token)
@@ -176,7 +177,7 @@ token_decode(const char *token)
     unsigned marker = 0;
     for (i = 0; i < 4; i++) {
 	if (!token[i]) {
-	    return DECODE_ERROR;
+	    return (i == 0) ? DECODE_DONE : DECODE_ERROR;
 	}
 	val *= 64;
 	if (token[i] == '=')
@@ -186,7 +187,7 @@ token_decode(const char *token)
 	else {
 	    int tmp = pos(token[i]);
 	    if (tmp == -1) {
-		return DECODE_ERROR;
+		return (i == 0) ? DECODE_DONE : DECODE_ERROR;
 	    }
 	    val += tmp;
 	}
@@ -203,12 +204,14 @@ rk_base64_decode(const char *str, void *data)
     unsigned char *q;
 
     q = data;
-    for (p = str; *p && (*p == '=' || strchr(base64_chars, *p)); p += 4) {
+    for (p = str; ; p += 4) {
 	uint32_t val = token_decode(p);
 	unsigned int marker = (val >> 24) & 0xff;
 	if (val == DECODE_ERROR) {
             errno = EINVAL;
 	    return -1;
+        } else if (val == DECODE_DONE) {
+	    break;
         }
 	*q++ = (val >> 16) & 0xff;
 	if (marker < 2)
