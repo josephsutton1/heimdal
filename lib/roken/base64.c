@@ -163,7 +163,7 @@ rk_base64_encode(const void *data, int size, char **str)
     }
     *p = 0;
     *str = s;
-    return (int) strlen(s);
+    return (int) (p - s);
 }
 
 #define DECODE_ERROR 0xffffffff
