@@ -168,12 +168,12 @@ rk_base64_encode(const void *data, int size, char **str)
 
 #define DECODE_ERROR 0xffffffff
 
-static unsigned int
+static uint32_t
 token_decode(const char *token)
 {
     int i;
-    unsigned int val = 0;
-    int marker = 0;
+    uint32_t val = 0;
+    unsigned marker = 0;
     for (i = 0; i < 4; i++) {
 	if (!token[i]) {
 	    return DECODE_ERROR;
