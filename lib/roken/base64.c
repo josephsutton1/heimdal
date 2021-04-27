@@ -174,9 +174,10 @@ token_decode(const char *token)
     int i;
     unsigned int val = 0;
     int marker = 0;
-    if (strlen(token) < 4)
-	return DECODE_ERROR;
     for (i = 0; i < 4; i++) {
+	if (!token[i]) {
+	    return DECODE_ERROR;
+	}
 	val *= 64;
 	if (token[i] == '=')
 	    marker++;
