@@ -204,7 +204,7 @@ rk_base64_decode(const char *str, void *data)
 
     q = data;
     for (p = str; *p && (*p == '=' || strchr(base64_chars, *p)); p += 4) {
-	unsigned int val = token_decode(p);
+	uint32_t val = token_decode(p);
 	unsigned int marker = (val >> 24) & 0xff;
 	if (val == DECODE_ERROR) {
             errno = EINVAL;
