@@ -120,8 +120,13 @@ token_decode(const char *token)
 	    marker++;
 	else if (marker > 0)
 	    return DECODE_ERROR;
-	else
-	    val += pos(token[i]);
+	else {
+	    int tmp = pos(token[i]);
+	    if (tmp == -1) {
+		return DECODE_ERROR;
+	    }
+	    val += tmp;
+	}
     }
     if (marker > 2)
 	return DECODE_ERROR;
