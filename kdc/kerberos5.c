@@ -618,6 +618,7 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	
 	ret = krb5_crypto_init(r->context, &challangekey, 0,
 			       &challangecrypto);
+	krb5_free_keyblock_contents(r->context, &challangekey);
 	if (ret)
 	    continue;
 	
@@ -629,6 +630,8 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	    const char *msg = krb5_get_error_message(r->context, ret);
 	    krb5_error_code ret2;
 	    char *str = NULL;
+
+	    krb5_crypto_destroy(r->context, challangecrypto);
 
 	    invalidPassword = 1;
 
