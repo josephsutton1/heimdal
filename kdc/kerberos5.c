@@ -563,7 +563,7 @@ make_pa_enc_challange(astgs_request_t r, krb5_crypto crypto)
 static krb5_error_code
 pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 {
-    krb5_data pepper1, pepper2, kdc_pepper, ts_data;
+    krb5_data client_pepper, kdc_pepper, longterm_pepper, ts_data;
     int invalidPassword = 0;
     EncryptedData enc_data;
     krb5_enctype aenctype;
@@ -591,13 +591,14 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	return ret;
     }
 
-    pepper1.data = "clientchallengearmor";
-    pepper1.length = strlen(pepper1.data);
-    pepper2.data = "challengelongterm";
-    pepper2.length = strlen(pepper2.data);
+    client_pepper.data = "clientchallengearmor";
+    client_pepper.length = strlen(client_pepper.data);
 
     kdc_pepper.data = "kdcchallengearmor";
     kdc_pepper.length = strlen(kdc_pepper.data);
+
+    longterm_pepper.data = "challengelongterm";
+    longterm_pepper.length = strlen(longterm_pepper.data);
 
     krb5_crypto_getenctype(r->context, r->armor_crypto, &aenctype);
 
@@ -613,7 +614,7 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	    continue;			
 	
 	ret = krb5_crypto_fx_cf2(r->context, r->armor_crypto, longtermcrypto,
-				 &pepper1, &pepper2, aenctype,
+				 &client_pepper, &longterm_pepper, aenctype,
 				 &challangekey);
 	if (ret) {
 	    krb5_crypto_destroy(r->context, longtermcrypto);
@@ -690,7 +691,7 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	free_PA_ENC_TS_ENC(&p);
 
 	ret = krb5_crypto_fx_cf2(r->context, r->armor_crypto, longtermcrypto,
-				 &kdc_pepper, &pepper2, aenctype,
+				 &kdc_pepper, &longterm_pepper, aenctype,
 				 &challangekey);
 	krb5_crypto_destroy(r->context, longtermcrypto);
 	if (ret)
