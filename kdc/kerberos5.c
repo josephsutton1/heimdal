@@ -563,7 +563,7 @@ make_pa_enc_challange(astgs_request_t r, krb5_crypto crypto)
 static krb5_error_code
 pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 {
-    krb5_data pepper1, pepper2, ts_data;
+    krb5_data pepper1, pepper2, kdc_pepper, ts_data;
     int invalidPassword = 0;
     EncryptedData enc_data;
     krb5_enctype aenctype;
@@ -596,6 +596,9 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
     pepper2.data = "challengelongterm";
     pepper2.length = strlen(pepper2.data);
 
+    kdc_pepper.data = "kdcchallengearmor";
+    kdc_pepper.length = strlen(kdc_pepper.data);
+
     krb5_crypto_getenctype(r->context, r->armor_crypto, &aenctype);
 
     for (i = 0; i < r->client->entry.keys.len; i++) {
@@ -612,26 +615,30 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	ret = krb5_crypto_fx_cf2(r->context, r->armor_crypto, longtermcrypto,
 				 &pepper1, &pepper2, aenctype,
 				 &challangekey);
-	krb5_crypto_destroy(r->context, longtermcrypto);
-	if (ret)
+	if (ret) {
+	    krb5_crypto_destroy(r->context, longtermcrypto);
 	    continue;
+	}
 	
 	ret = krb5_crypto_init(r->context, &challangekey, 0,
 			       &challangecrypto);
 	krb5_free_keyblock_contents(r->context, &challangekey);
-	if (ret)
+	if (ret) {
+	    krb5_crypto_destroy(r->context, longtermcrypto);
 	    continue;
+	}
 	
 	ret = krb5_decrypt_EncryptedData(r->context, challangecrypto,
 					 KRB5_KU_ENC_CHALLENGE_CLIENT,
 					 &enc_data,
 					 &ts_data);
+	krb5_crypto_destroy(r->context, challangecrypto);
 	if (ret) {
 	    const char *msg = krb5_get_error_message(r->context, ret);
 	    krb5_error_code ret2;
 	    char *str = NULL;
 
-	    krb5_crypto_destroy(r->context, challangecrypto);
+	    krb5_crypto_destroy(r->context, longtermcrypto);
 
 	    invalidPassword = 1;
 
@@ -653,7 +660,7 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 				   &size);
 	krb5_data_free(&ts_data);
 	if(ret){
-	    krb5_crypto_destroy(r->context, challangecrypto);
+	    krb5_crypto_destroy(r->context, longtermcrypto);
 	    ret = KRB5KDC_ERR_PREAUTH_FAILED;
 	    _kdc_r_log(r, 4, "Failed to decode PA-ENC-TS_ENC -- %s",
 		       r->cname);
@@ -663,7 +670,7 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	if (labs(kdc_time - p.patimestamp) > r->context->max_skew) {
 	    char client_time[100];
 
-	    krb5_crypto_destroy(r->context, challangecrypto);
+	    krb5_crypto_destroy(r->context, longtermcrypto);
 
 	    krb5_format_time(r->context, p.patimestamp,
 			     client_time, sizeof(client_time), TRUE);
@@ -681,6 +688,19 @@ pa_enc_chal_validate(astgs_request_t r, const PA_DATA *pa)
 	}
 
 	free_PA_ENC_TS_ENC(&p);
+
+	ret = krb5_crypto_fx_cf2(r->context, r->armor_crypto, longtermcrypto,
+				 &kdc_pepper, &pepper2, aenctype,
+				 &challangekey);
+	krb5_crypto_destroy(r->context, longtermcrypto);
+	if (ret)
+	    goto out;
+
+	ret = krb5_crypto_init(r->context, &challangekey, 0,
+			       &challangecrypto);
+	krb5_free_keyblock_contents(r->context, &challangekey);
+	if (ret)
+	    goto out;
 
 	ret = make_pa_enc_challange(r, challangecrypto);
 	krb5_crypto_destroy(r->context, challangecrypto);
